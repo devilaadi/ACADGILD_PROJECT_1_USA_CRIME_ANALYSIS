@@ -1,0 +1,75 @@
+
+--1. Write a MapReduce/Pig program to calculate the number of cases investigated under each FBI code
+
+FBI_DATA = LOAD '/home/cloudera/Desktop/Acadgild/Project_1_USA_CRIME_ANALYSIS/Crimes_-_2001_to_present.csv' USING PigStorage(',') AS (ID:int,Case:chararray,Date:chararray,Block:chararray,IUCR:chararray,Primary_Type:chararray,Description:chararray,Location_Description:chararray,Arrest:chararray,
+Domestic:chararray,Beat:int,District:int,Ward:int,Community_Area:int,FBICode:chararray,X_Coordinate:int,Y_Coordinate:int,Year:int,Updated_On:chararray,
+Latitude:double,Longitude:double,Location:chararray);
+
+FBI_CODE_group = GROUP FBI_DATA BY FBICode ;
+
+Count_cases = FOREACH FBI_CODE_group GENERATE group,COUNT(FBI_DATA) as cases ;
+
+
+DUMP Count_cases;
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+--2 Write a MapReduce/Pig program to calculate the number of cases investigated under FBI code 32.
+
+FBI_DATA = LOAD '/home/cloudera/Desktop/Acadgild/Project_1_USA_CRIME_ANALYSIS/Crimes_-_2001_to_present.csv' USING PigStorage(',') AS (ID:int,Case:chararray,Date:chararray,Block:chararray,IUCR:chararray,Primary_Type:chararray,Description:chararray,Location_Description:chararray,Arrest:chararray,
+Domestic:chararray,Beat:int,District:int,Ward:int,Community_Area:int,FBICode:chararray,X_Coordinate:int,Y_Coordinate:int,Year:int,Updated_On:chararray,
+Latitude:double,Longitude:double,Location:chararray);
+
+
+Filter_FBI_CODE_32 = FILTER FBI_DATA BY FBICode == '32' ;
+
+FBI_CODE_32_group = GROUP Filter_FBI_CODE_32 BY FBICode;
+
+Count_cases_32 = FOREACH FBI_CODE_32_group GENERATE group,COUNT(Filter_FBI_CODE_32) as cases ;
+
+DUMP Count_cases_32 ;
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+--3. Write a MapReduce/Pig program to calculate the number of arrests in theft district wise.
+
+FBI_DATA = LOAD '/home/cloudera/Desktop/Acadgild/Project_1_USA_CRIME_ANALYSIS/Crimes_-_2001_to_present.csv' USING PigStorage(',') AS (ID:int,Case:chararray,Date:chararray,Block:chararray,IUCR:chararray,Primary_Type:chararray,Description:chararray,Location_Description:chararray,Arrest:chararray,
+Domestic:chararray,Beat:int,District:int,Ward:int,Community_Area:int,FBICode:chararray,X_Coordinate:int,Y_Coordinate:int,Year:int,Updated_On:chararray,
+Latitude:double,Longitude:double,Location:chararray);
+
+TEMP_FILTER_ARREST_THEFT = FILTER FBI_DATA BY (Primary_Type == 'THEFT') AND (Arrest == 'true') ;
+ 
+DISTRICT_GROUP = GROUP TEMP_FILTER_ARREST_THEFT BY District ;
+
+Number_Arrest = FOREACH DISTRICT_GROUP GENERATE group, COUNT(TEMP_FILTER_ARREST_THEFT) as arrest ; 
+
+DUMP Number_Arrest ;
+
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+--4. Write a MapReduce/Pig program to calculate the number of arrests done between October 2014 and October 2015.
+
+REGISTER '/home/cloudera/Desktop/Acadgild/Project_1_USA_CRIME_ANALYSIS/piggybank-0.15.0.jar';
+
+FBI_DATA = LOAD '/home/cloudera/Desktop/Acadgild/Project_1_USA_CRIME_ANALYSIS/Crimes_-_2001_to_present.csv' USING org.apache.pig.piggybank.storage.CSVExcelStorage(',','NO_MULTILINE','UNIX');
+
+transRows = FOREACH FBI_DATA GENERATE (chararray)$18 as DtTime,(chararray)$9 as Arrest;
+
+filterCols = FILTER transRows BY (DtTime is not null) AND (Arrest == 'true');
+
+dateSubstring = FOREACH filterCols GENERATE ToDate(SUBSTRING(DtTime,0,19),'MM/dd/yyyy hh:mm:ss') as Dt,Arrest;
+
+dateWiseArrest = FOREACH dateSubstring GENERATE GetMonth(Dt) as Month,GetYear(Dt) as Year,Arrest;
+
+totalArrest = FILTER dateWiseArrest BY (Month>9 AND Year == 2014) OR (Month<11 and Year == 2015);
+
+groupTotalArrest = GROUP totalArrest ALL;
+
+countTotalArrest = FOREACH groupTotalArrest GENERATE COUNT(totalArrest.Arrest) as TotalArrests;
+
+DUMP countTotalArrest;
+
+
+
+
